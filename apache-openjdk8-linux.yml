@@ -1,0 +1,75 @@
+name: Apache Web Server and Java 8 OpenJDK
+description: Install the latest Apache Web Server and Java 8 OpenJDK.
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: InstallOpenJDK
+        action: ExecuteBash
+        inputs:
+          commands:
+            - sudo yum install java-1.8.0-openjdk -y
+
+      - name: InstallApache
+        action: ExecuteBash
+        inputs:
+          commands:
+            - sudo yum install httpd -y
+            - sudo systemctl start httpd
+            - sudo systemctl enable httpd
+            - sudo usermod -a -G apache ec2-user
+
+      - name: DownloadIndexFile
+        action: S3Download
+        inputs:
+          - source: s3://10ambatch/index.html
+            destination: /var/www/html/index.html
+
+      - name: ChangeIndexFilePermission
+        action: ExecuteBash
+        onFailure: Continue
+        inputs:
+          commands:
+            - "chmod 755 {{ build.DownloadIndexFile.inputs[0].destination }}"
+
+  - name: validate
+    steps:
+      - name: ValidateApacheService
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              CUR_STATE=$(systemctl is-active httpd)
+              if [[ $CUR_STATE == "active" ]]; then
+                  echo "Apache service is active."
+                  exit 0
+              else
+                  echo "Apache service is not active. State '$CUR_STATE'. Failing."
+                  exit 1
+              fi
+
+      - name: ValidateApacheCommandExists
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              if type -P httpd &>/dev/null; then
+                  echo "Apache command exists."
+                  exit 0
+              else
+                  echo "Apache command does not exist. Failing."
+                  exit 1
+              fi
+
+      - name: ValidateApacheGroupMembership
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              if groups ec2-user | grep &>/dev/null 'apache'; then
+                  echo "The 'ec2-user' is a member of the 'apache' group."
+                  exit 0
+              else
+                  echo "The 'ec2-user' is not a member of the 'apache' group. Failing."
+                  exit 1
+              fi
