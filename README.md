@@ -41,7 +41,7 @@ When you use the EC2 Image Builder console to create a golden image, a wizard gu
     - The IAM role that you associate with your instance profile must have permissions to run the build and test components included in your image.
     - The following IAM role policies must be attached to the IAM role that is associated with the instance profile:
       - `EC2InstanceProfileForImageBuilder`
-      - `AmazonSSMManagedInstanceCore`
+      - `AmazonSSMManagedInstanceCore` or `AmazonSSMFullAccess`
     - If you configure logging, the instance profile specified in your infrastructure configuration must have `s3:PutObject` permissions for the target bucket (`arn:aws:s3:::<BucketName>/*`).
 
 ### Document Sections
